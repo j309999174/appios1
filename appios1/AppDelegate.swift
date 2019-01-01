@@ -7,15 +7,72 @@
 //
 
 import UIKit
+import LeanCloud
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
-
+class AppDelegate: UIResponder, UIApplicationDelegate,JPUSHRegisterDelegate {
+    
     var window: UIWindow?
+    
+    
+    func jpushNotificationCenter(_ center: UNUserNotificationCenter!, willPresent notification: UNNotification!, withCompletionHandler completionHandler: ((Int) -> Void)!) {
+        let userInfo = notification.request.content.userInfo
+        if notification.request.trigger is UNPushNotificationTrigger {
+            JPUSHService.handleRemoteNotification(userInfo)
+        }
+        // 需要执行这个方法，选择是否提醒用户，有Badge、Sound、Alert三种类型可以选择设置
+        completionHandler(Int(UNNotificationPresentationOptions.alert.rawValue))
+        
+    }
+    
+    func jpushNotificationCenter(_ center: UNUserNotificationCenter!, didReceive response: UNNotificationResponse!, withCompletionHandler completionHandler: (() -> Void)!) {
+        let userInfo = response.notification.request.content.userInfo
+        if response.notification.request.trigger is UNPushNotificationTrigger {
+            JPUSHService.handleRemoteNotification(userInfo)
+        }
+        // 系统要求执行这个方法
+        completionHandler()
+        
+    }
+    
+    func jpushNotificationCenter(_ center: UNUserNotificationCenter!, openSettingsFor notification: UNNotification?) {
+        
+    }
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        //注册 DeviceToken
+        JPUSHService.registerDeviceToken(deviceToken)
+    }
+    
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        func application(_ application: UIApplication,
+                         didFailToRegisterForRemoteNotificationsWithError error: Error) {
+            //可选
+            NSLog("did Fail To Register For Remote Notifications With Error: \(error)")
+        }
+    }
+
+
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        //加载leancloud
+        LCApplication.default.set(
+            id:  "TnGaMvIpQV9StkLoDDTl7Hud-gzGzoHsz", /* Your app ID */
+            key: "ppjTYlOutL7Il4Qairvdr3eV" /* Your app key */
+        )
+        
+        //极光推送
+        let entity = JPUSHRegisterEntity()
+        entity.types = 1 << 0 | 1 << 1 | 1 << 2
+        JPUSHService.register(forRemoteNotificationConfig: entity, delegate: self)
+        
+        let advertisingId = ASIdentifierManager.shared().advertisingIdentifier.uuidString
+        JPUSHService.setup(withOption: launchOptions, appKey: "d14f262b327bacae96bcc5dd", channel: nil, apsForProduction: false, advertisingIdentifier: advertisingId)
+        
+        
         return true
     }
 
